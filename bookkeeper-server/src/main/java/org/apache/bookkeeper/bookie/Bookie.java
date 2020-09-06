@@ -1256,6 +1256,8 @@ public class Bookie extends BookieCriticalThread {
                                   boolean ackBeforeSync, WriteCallback cb, Object ctx, byte[] masterKey)
             throws IOException, BookieException, InterruptedException {
         long ledgerId = handle.getLedgerId();
+
+        // 这里会写入writeCache，ledgerStorage.addEntry
         long entryId = handle.addEntry(entry);
 
         bookieStats.getWriteBytes().add(entry.readableBytes());
@@ -1263,6 +1265,7 @@ public class Bookie extends BookieCriticalThread {
         // journal `addEntry` should happen after the entry is added to ledger storage.
         // otherwise the journal entry can potentially be rolled before the ledger is created in ledger storage.
         if (masterKeyCache.get(ledgerId) == null) {
+            // 如果密码cache里面没有这个ledgerId的缓存则写入journal
             // Force the load into masterKey cache
             byte[] oldValue = masterKeyCache.putIfAbsent(ledgerId, masterKey);
             if (oldValue == null) {
@@ -1274,7 +1277,10 @@ public class Bookie extends BookieCriticalThread {
                 bb.put(masterKey);
                 bb.flip();
 
-                getJournal(ledgerId).logAddEntry(bb, false /* ackBeforeSync */, new NopWriteCallback(), null);
+                // 获得journal 是对ledgerId hash
+                getJournal(ledgerId)
+                        .logAddEntry(bb, false /* ackBeforeSync */, new NopWriteCallback(), null);
+                // 写入entry放入到Journal的队列里面
             }
         }
 
@@ -1379,6 +1385,9 @@ public class Bookie extends BookieCriticalThread {
         boolean success = false;
         int entrySize = 0;
         try {
+            // 创建一个Descriptor
+            // 里面封装了LedgerStorage的信息
+            // ledgerId
             LedgerDescriptor handle = getLedgerForEntry(entry, masterKey);
             synchronized (handle) {
                 if (handle.isFenced()) {
@@ -1386,6 +1395,7 @@ public class Bookie extends BookieCriticalThread {
                             .create(BookieException.Code.LedgerFencedException);
                 }
                 entrySize = entry.readableBytes();
+                // 内部写入
                 addEntryInternal(handle, entry, ackBeforeSync, cb, ctx, masterKey);
             }
             success = true;
