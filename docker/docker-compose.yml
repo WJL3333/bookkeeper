@@ -23,7 +23,8 @@ services:
     hostname: zookeeper
 
   bookie1:
-    image: apache/bookkeeper
+    image: apache/bookkeeper:4.11.0
+
     hostname: bookie1
     links:
       - zookeeper
@@ -31,9 +32,11 @@ services:
       - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
+      - BK_httpServerPort=8080
+      - BK_useHostNameAsBookieID=true
 
   bookie2:
-    image: apache/bookkeeper
+    image: apache/bookkeeper:4.11.0
     hostname: bookie2
     links:
       - zookeeper
@@ -41,9 +44,11 @@ services:
       - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
+      - BK_httpServerPort=8080
+      - BK_useHostNameAsBookieID=true
 
   bookie3:
-    image: apache/bookkeeper
+    image: apache/bookkeeper:4.11.0
     hostname: bookie3
     links:
       - zookeeper
@@ -51,11 +56,17 @@ services:
       - JAVA_HOME=/usr/lib/jvm/jre-1.8.0
       - BK_zkServers=zookeeper:2181
       - BK_zkLedgersRootPath=/ledgers
+      - BK_httpServerPort=8080
+      - BK_useHostNameAsBookieID=true
 
   dice:
     image: caiok/bookkeeper-tutorial
     depends_on:
       - zookeeper
+      - bookie1
+      - bookie2
+      - bookie3
+
     links:
       - zookeeper
       - bookie3
